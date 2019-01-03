@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.google.common.collect.Ordering;
 import com.indeed.util.core.reference.SharedReference;
@@ -38,8 +38,8 @@ public final class FilteredGeneration<K, V> implements Generation<K, V> {
     private final K maxKey;
     private final boolean maxInclusive;
     private final Ordering<K> ordering;
-    private final F<Entry<K,V>,Boolean> checkMax;
-    private final F<Entry<K,V>,Boolean> checkMin;
+    private final F<Entry<K, V>, Boolean> checkMax;
+    private final F<Entry<K, V>, Boolean> checkMin;
 
     public FilteredGeneration(Generation<K, V> generation, SharedReference<Closeable> closeable, @Nullable K minKey, boolean minInclusive, @Nullable K maxKey, boolean maxInclusive) {
         this.generation = generation;
@@ -64,7 +64,7 @@ public final class FilteredGeneration<K, V> implements Generation<K, V> {
             }
         };
     }
-    
+
     private boolean checkRange(K key) {
         final int cmpMin = minKey == null ? 1 : ordering.compare(key, minKey);
         if (cmpMin <= 0) {

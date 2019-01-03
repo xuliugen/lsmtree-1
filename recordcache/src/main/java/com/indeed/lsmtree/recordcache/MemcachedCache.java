@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataInput;
@@ -31,43 +31,18 @@ import org.apache.log4j.Priority;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jplaisance
  */
-public final class MemcachedCache<K,V> implements Closeable {
+public final class MemcachedCache<K, V> implements Closeable {
 
     private static final Logger log = Logger.getLogger(MemcachedCache.class);
 
-    private static final int CACHE_EXPIRY_SECONDS = (int)TimeUnit.HOURS.toSeconds(6);
-
-    private final MemcachedClient memcache;
-
-    private final InetSocketAddress host;
-
-    private final String prefix;
-
-    private final Stringifier<K> keyStringifier;
-    
-    private final Transcoder<V> valueTranscoder;
-
-    private final ArrayBlockingQueue<Future<Boolean>> addFutureQueue = new ArrayBlockingQueue<Future<Boolean>>(10000);
-
-    private final ArrayBlockingQueue<Future<Boolean>> setFutureQueue = new ArrayBlockingQueue<Future<Boolean>>(10000);
-
-    private final AtomicBoolean run = new AtomicBoolean(true);
-
+    private static final int CACHE_EXPIRY_SECONDS = (int) TimeUnit.HOURS.toSeconds(6);
     private static final Transcoder<byte[]> identityTranscoder = new Transcoder<byte[]>() {
         @Override
         public boolean asyncDecode(final CachedData cachedData) {
@@ -89,12 +64,14 @@ public final class MemcachedCache<K,V> implements Closeable {
             return Integer.MAX_VALUE;
         }
     };
-
-    public static<K,V> MemcachedCache<K,V> create(String host, int port, String prefix, Stringifier<K> keyStringifier, Serializer<V> valueSerializer) throws IOException {
-        InetSocketAddress address = new InetSocketAddress(host, port);
-        MemcachedClient memcache = new MemcachedClient(address);
-        return new MemcachedCache<K,V>(memcache, address, prefix, keyStringifier, valueSerializer);
-    }
+    private final MemcachedClient memcache;
+    private final InetSocketAddress host;
+    private final String prefix;
+    private final Stringifier<K> keyStringifier;
+    private final Transcoder<V> valueTranscoder;
+    private final ArrayBlockingQueue<Future<Boolean>> addFutureQueue = new ArrayBlockingQueue<Future<Boolean>>(10000);
+    private final ArrayBlockingQueue<Future<Boolean>> setFutureQueue = new ArrayBlockingQueue<Future<Boolean>>(10000);
+    private final AtomicBoolean run = new AtomicBoolean(true);
 
     MemcachedCache(
             final MemcachedClient memcache,
@@ -154,6 +131,12 @@ public final class MemcachedCache<K,V> implements Closeable {
         setFutureChecker.start();
     }
 
+    public static <K, V> MemcachedCache<K, V> create(String host, int port, String prefix, Stringifier<K> keyStringifier, Serializer<V> valueSerializer) throws IOException {
+        InetSocketAddress address = new InetSocketAddress(host, port);
+        MemcachedClient memcache = new MemcachedClient(address);
+        return new MemcachedCache<K, V>(memcache, address, prefix, keyStringifier, valueSerializer);
+    }
+
     public void putInCache(K key, V value, boolean addOnly) {
         putInCache(key, value, addOnly, -1);
     }
@@ -173,17 +156,17 @@ public final class MemcachedCache<K,V> implements Closeable {
         }
     }
 
-    public Map<K,V> getFromCache(Collection<K> keys, CacheStats cacheStats) {
+    public Map<K, V> getFromCache(Collection<K> keys, CacheStats cacheStats) {
         if (keys.isEmpty()) {
             log.debug("got empty request");
             return Collections.emptyMap();
         }
-        Map<K,V> results = Maps.newHashMapWithExpectedSize(keys.size());
+        Map<K, V> results = Maps.newHashMapWithExpectedSize(keys.size());
 
         String[] memcachedKeys = new String[keys.size()];
         int i = 0;
         for (K key : keys) {
-            memcachedKeys[i++] = prefix+ keyStringifier.toString(key);
+            memcachedKeys[i++] = prefix + keyStringifier.toString(key);
         }
         long start = System.nanoTime();
         Map<String, V> map;
@@ -194,7 +177,7 @@ public final class MemcachedCache<K,V> implements Closeable {
             map = Collections.emptyMap();
         }
         if (map == null) map = Collections.emptyMap();
-        cacheStats.memcacheTime+=System.nanoTime()-start;
+        cacheStats.memcacheTime += System.nanoTime() - start;
 
         for (Map.Entry<String, V> entry : map.entrySet()) {
             final V value = entry.getValue();
@@ -204,7 +187,7 @@ public final class MemcachedCache<K,V> implements Closeable {
                 results.put(key, value);
             }
         }
-        cacheStats.memcacheHits+=results.size();
+        cacheStats.memcacheHits += results.size();
         if (log.isTraceEnabled()) {
             log.trace("Requested " + keys.size() + " items from cache, got " + results.size() + " items back");
         }
@@ -248,7 +231,7 @@ public final class MemcachedCache<K,V> implements Closeable {
 
     public boolean checkAvailability(String key) {
         long time = System.nanoTime();
-        key += "-"+UUID.randomUUID().toString();
+        key += "-" + UUID.randomUUID().toString();
         OperationFuture<Boolean> future = memcache.set(key, CACHE_EXPIRY_SECONDS, Longs.toByteArray(time), identityTranscoder);
         try {
             if (!future.get()) return false;
@@ -287,11 +270,11 @@ public final class MemcachedCache<K,V> implements Closeable {
                                 log.log(failureLevel, failedMessage);
                             }
                         } catch (ExecutionException e) {
-                            log.error("exception executing memcached operation in thread: "+Thread.currentThread().getName(), e);
+                            log.error("exception executing memcached operation in thread: " + Thread.currentThread().getName(), e);
                         }
                     }
                 } catch (Exception e) {
-                    log.error("exception executing memcached operation in thread: "+Thread.currentThread().getName(), e);
+                    log.error("exception executing memcached operation in thread: " + Thread.currentThread().getName(), e);
                 }
             }
         }

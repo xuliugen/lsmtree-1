@@ -11,13 +11,14 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
-import java.io.Closeable;
-import java.io.IOException;
 import com.google.common.io.Closer;
 import com.indeed.lsmtree.core.Store;
 import com.indeed.lsmtree.recordlog.RecordLogDirectory;
+
+import java.io.Closeable;
+import java.io.IOException;
 
 /**
  * @author jchien

@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core.iteratee;
+package com.indeed.lsmtree.core.iteratee;
 
 import fj.F;
 import fj.P;
@@ -25,23 +25,23 @@ import org.apache.log4j.Logger;
 public final class Enumerator {
     private static final Logger log = Logger.getLogger(Enumerator.class);
 
-    public static <A,B> P2<B, Stream<A>> runOnce(Processor<A,B> processor, final Stream<A> stream) {
-        Cont<A,B> cont = processor.Cont();
-        return new RunOnce<A,B>(cont, stream).run();
+    public static <A, B> P2<B, Stream<A>> runOnce(Processor<A, B> processor, final Stream<A> stream) {
+        Cont<A, B> cont = processor.Cont();
+        return new RunOnce<A, B>(cont, stream).run();
     }
-    
-    private static final class RunOnce<A,B> {
-        Iteratee<A,B> it;
+
+    private static final class RunOnce<A, B> {
+        Iteratee<A, B> it;
         Stream<A> stream;
-        P2<B,Stream<A>> ret;
+        P2<B, Stream<A>> ret;
 
         private RunOnce(Iteratee<A, B> it, Stream<A> stream) {
             this.it = it;
             this.stream = stream;
         }
 
-        P2<B,Stream<A>> run() {
-            Iteratee.Matcher<A,B,Boolean> matcher = new Iteratee.Matcher<A,B,Boolean>() {
+        P2<B, Stream<A>> run() {
+            Iteratee.Matcher<A, B, Boolean> matcher = new Iteratee.Matcher<A, B, Boolean>() {
                 @Override
                 public Boolean done(Input<A> remaining, final B value) {
                     ret = remaining.match(new Input.Matcher<A, P2<B, Stream<A>>>() {
@@ -65,7 +65,8 @@ public final class Enumerator {
                 public Boolean cont(F<Input<A>, Iteratee<A, B>> cont) {
                     if (stream == null) {
                         throw new IllegalStateException("stream cannot be null, to avoid this ensure that EOF forces Done to be returned");
-                    } if (stream.isEmpty()) {
+                    }
+                    if (stream.isEmpty()) {
                         it = cont.f(EOF.<A>eof());
                         stream = null;
                         return false;
@@ -76,7 +77,7 @@ public final class Enumerator {
                     }
                 }
             };
-            while (!it.match(matcher));
+            while (!it.match(matcher)) ;
             return ret;
         }
     }

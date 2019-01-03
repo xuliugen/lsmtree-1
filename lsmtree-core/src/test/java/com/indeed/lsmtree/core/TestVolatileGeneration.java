@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.indeed.util.serialization.IntSerializer;
 import com.indeed.util.serialization.LongSerializer;
@@ -27,8 +27,8 @@ import java.util.Iterator;
 import java.util.Random;
 
 /**
-* @author jplaisance
-*/
+ * @author jplaisance
+ */
 public final class TestVolatileGeneration extends TestCase {
 
     private static final Logger log = Logger.getLogger(TestVolatileGeneration.class);
@@ -56,7 +56,7 @@ public final class TestVolatileGeneration extends TestCase {
             random[i] = r.nextInt();
         }
         for (int element : random) {
-            volatileGeneration.put(element, (long)element);
+            volatileGeneration.put(element, (long) element);
         }
         int[] sorted = new int[random.length];
         System.arraycopy(random, 0, sorted, 0, random.length);
@@ -72,7 +72,7 @@ public final class TestVolatileGeneration extends TestCase {
     private void verifyIterationOrder(final VolatileGeneration<Integer, Long> volatileGeneration, final int[] sorted) throws IOException {
         Iterator<Generation.Entry<Integer, Long>> iterator = volatileGeneration.iterator();
         for (int i = 0; i < sorted.length; i++) {
-            while (i+1 < sorted.length && sorted[i] == sorted[i+1]) i++;
+            while (i + 1 < sorted.length && sorted[i] == sorted[i + 1]) i++;
             assertTrue(iterator.hasNext());
             Generation.Entry<Integer, Long> next = iterator.next();
             assertTrue(next.getKey() == sorted[i]);

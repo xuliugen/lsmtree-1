@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.indeed.util.io.VIntUtils;
 import com.indeed.util.serialization.Serializer;
@@ -35,7 +35,7 @@ public final class DeltaEncodedIntegerCollectionSerializer implements Serializer
         out.writeInt(integers.size());
         int previous = 0;
         for (int i : integers) {
-            final int delta = i-previous;
+            final int delta = i - previous;
             VIntUtils.writeVInt(out, delta);
             previous = i;
         }
@@ -48,7 +48,7 @@ public final class DeltaEncodedIntegerCollectionSerializer implements Serializer
         int previous = 0;
         for (int i = 0; i < length; i++) {
             final int delta = VIntUtils.readVInt(in);
-            final int id = previous+delta;
+            final int id = previous + delta;
             previous = id;
             ret.add(id);
         }

@@ -11,21 +11,21 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.indeed.util.core.Either;
-import com.indeed.util.core.threads.NamedThreadFactory;
-import com.indeed.util.serialization.LongSerializer;
-import com.indeed.util.serialization.Serializer;
-import com.indeed.util.varexport.Export;
 import com.indeed.lsmtree.core.StorageType;
 import com.indeed.lsmtree.core.Store;
 import com.indeed.lsmtree.core.StoreBuilder;
 import com.indeed.lsmtree.recordlog.RecordFile;
 import com.indeed.lsmtree.recordlog.RecordLogDirectory;
+import com.indeed.util.core.Either;
+import com.indeed.util.core.threads.NamedThreadFactory;
+import com.indeed.util.serialization.LongSerializer;
+import com.indeed.util.serialization.Serializer;
+import com.indeed.util.varexport.Export;
 import fj.P;
 import fj.P2;
 import fj.data.Option;
@@ -37,22 +37,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,11 +65,10 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
 
     /**
      * Use {@link com.indeed.lsmtree.recordcache.PersistentRecordCache.Builder#build()} to create instances.
-     *
-     * @param index                 lsm tree
-     * @param recordLogDirectory    record log directory
-     * @param checkpointDir         checkpoint directory
-     * @throws IOException          thrown if an I/O error occurs
+     * @param index              lsm tree
+     * @param recordLogDirectory record log directory
+     * @param checkpointDir      checkpoint directory
+     * @throws IOException thrown if an I/O error occurs
      */
     private PersistentRecordCache(
             final Store<K, Long> index,
@@ -113,29 +98,30 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                     final int puts = indexPuts.get();
                     if (puts > 0) log.debug("avg index put time: " + indexPutTime.get() / puts / 1000d + " us");
                     final int deletes = indexDeletes.get();
-                    if (deletes > 0) log.debug("avg index delete time: " + indexDeleteTime.get() / deletes / 1000d + " us");
+                    if (deletes > 0)
+                        log.debug("avg index delete time: " + indexDeleteTime.get() / deletes / 1000d + " us");
                 }
 
                 if (op.getClass() == Put.class) {
-                    final Put<K,V> put = (Put)op;
+                    final Put<K, V> put = (Put) op;
                     final long start = System.nanoTime();
                     synchronized (index) {
                         index.put(put.getKey(), position);
                     }
-                    indexPutTime.addAndGet(System.nanoTime()-start);
+                    indexPutTime.addAndGet(System.nanoTime() - start);
                     indexPuts.incrementAndGet();
                 } else if (op.getClass() == Delete.class) {
-                    final Delete<K> delete = (Delete)op;
+                    final Delete<K> delete = (Delete) op;
                     for (K k : delete.getKeys()) {
                         final long start = System.nanoTime();
                         synchronized (index) {
                             index.delete(k);
                         }
-                        indexDeleteTime.addAndGet(System.nanoTime()-start);
+                        indexDeleteTime.addAndGet(System.nanoTime() - start);
                         indexDeletes.incrementAndGet();
                     }
                 } else if (op.getClass() == Checkpoint.class) {
-                    final Checkpoint checkpoint = (Checkpoint)op;
+                    final Checkpoint checkpoint = (Checkpoint) op;
                     if (checkpointDir != null) {
                         sync();
                         index.checkpoint(new File(checkpointDir, String.valueOf(checkpoint.getTimestamp())));
@@ -181,10 +167,9 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
 
     /**
      * Performs lookup for single key.
-     *
-     * @param key           key to lookup
-     * @param cacheStats    stats
-     * @return              value for lookup key, or null if not found
+     * @param key        key to lookup
+     * @param cacheStats stats
+     * @return value for lookup key, or null if not found
      */
     @Nullable
     public V get(@Nonnull K key,
@@ -198,10 +183,9 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
 
     /**
      * Performs batch lookup for multiple keys.
-     *
-     * @param keys          keys to lookup
-     * @param cacheStats    stats
-     * @return              map of found keys to their values
+     * @param keys       keys to lookup
+     * @param cacheStats stats
+     * @return map of found keys to their values
      */
     @Nonnull
     public Map<K, V> getAll(@Nonnull Collection<K> keys,
@@ -214,7 +198,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                 try {
                     position = index.get(key);
                 } catch (Exception e) {
-                    log.error("index read error while fetching key "+key, e);
+                    log.error("index read error while fetching key " + key, e);
                     cacheStats.indexReadErrors++;
                     throw e;
                 }
@@ -223,20 +207,21 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                     Put<K, V> put;
                     try {
                         put = lookupAddress(cacheStats, position);
-                        if (comparator.compare(put.getKey(), key) != 0) throw new IOException("keys do not match - expected: "+key+" actual: "+put.getKey());
+                        if (comparator.compare(put.getKey(), key) != 0)
+                            throw new IOException("keys do not match - expected: " + key + " actual: " + put.getKey());
                     } catch (Exception e) {
-                        log.info("exception looking up key: "+key+", attempting repair ", e);
+                        log.info("exception looking up key: " + key + ", attempting repair ", e);
                         try {
                             reindex(position);
                         } catch (IndexReadException e1) {
-                            log.error("index read error while fetching key "+key, e1);
+                            log.error("index read error while fetching key " + key, e1);
                             cacheStats.indexReadErrors++;
                             throw e1;
                         }
                         try {
                             position = index.get(key);
                         } catch (Exception e1) {
-                            log.error("index read error while fetching key "+key, e1);
+                            log.error("index read error while fetching key " + key, e1);
                             cacheStats.indexReadErrors++;
                             throw e1;
                         }
@@ -246,14 +231,14 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                     results.put(key, put.getValue());
                 }
             } catch (Exception e) {
-                log.error("error fetching key: "+key, e);
+                log.error("error fetching key: " + key, e);
                 cacheStats.recordLogReadErrors++;
             }
         }
         cacheStats.persistentStoreHits = results.size();
         log.debug("persistent store hits: " + (results.size()));
-        cacheStats.misses = keys.size()-results.size();
-        log.debug("misses: "+(keys.size()-results.size()));
+        cacheStats.misses = keys.size() - results.size();
+        log.debug("misses: " + (keys.size() - results.size()));
         return results;
     }
 
@@ -261,9 +246,9 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             throws IOException {
         final long start1 = System.nanoTime();
         final Operation op = recordLogDirectory.get(position);
-        if (cacheStats != null) cacheStats.recordLogTime+=System.nanoTime()-start1;
+        if (cacheStats != null) cacheStats.recordLogTime += System.nanoTime() - start1;
         if (op.getClass() != Put.class) throw new IOException("class is not Put");
-        final Put<K,V> put = (Put) op;
+        final Put<K, V> put = (Put) op;
         put.getValue();
         return put;
     }
@@ -271,17 +256,16 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
     /**
      * Performs lookup for multiple keys and returns a streaming iterator to results.
      * Each element in the iterator is one of
-     *  (1) an exception associated with a single lookup
-     *  (2) a key value tuple
-     *
-     * @param keys      lookup keys
-     * @param progress  (optional) an AtomicInteger for tracking progress
-     * @param skipped   (optional) an AtomicInteger for tracking missing keys
-     * @return          iterator of lookup results
+     * (1) an exception associated with a single lookup
+     * (2) a key value tuple
+     * @param keys     lookup keys
+     * @param progress (optional) an AtomicInteger for tracking progress
+     * @param skipped  (optional) an AtomicInteger for tracking missing keys
+     * @return iterator of lookup results
      */
-    public Iterator<Either<Exception, P2<K,V>>> getStreaming(final @Nonnull Iterator<K> keys,
-                                                             final @Nullable AtomicInteger progress,
-                                                             final @Nullable AtomicInteger skipped) {
+    public Iterator<Either<Exception, P2<K, V>>> getStreaming(final @Nonnull Iterator<K> keys,
+                                                              final @Nullable AtomicInteger progress,
+                                                              final @Nullable AtomicInteger skipped) {
         log.info("starting store lookups");
         LongArrayList addressList = new LongArrayList();
         int notFound = 0;
@@ -292,7 +276,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                 address = index.get(key);
             } catch (IOException e) {
                 log.error("error", e);
-                return Iterators.singletonIterator(Left.<Exception, P2<K,V>>of(new IndexReadException(e)));
+                return Iterators.singletonIterator(Left.<Exception, P2<K, V>>of(new IndexReadException(e)));
             }
             if (address != null) {
                 addressList.add(address);
@@ -329,17 +313,17 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
                     }
                 }
         );
-        final BlockingQueue<List<Either<Exception, P2<K,V>>>> completionQueue = new ArrayBlockingQueue<List<Either<Exception, P2<K,V>>>>(10);
+        final BlockingQueue<List<Either<Exception, P2<K, V>>>> completionQueue = new ArrayBlockingQueue<List<Either<Exception, P2<K, V>>>>(10);
         final AtomicLong runningTasks = new AtomicLong(0);
         final AtomicBoolean taskSubmitterRunning = new AtomicBoolean(true);
-        
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (iterable.hasNext()) {
                     runningTasks.incrementAndGet();
                     final List<Long> addressesSublist = iterable.next();
-                    primerThreads.submit(new FutureTask<List<Either<Exception, P2<K,V>>>>(new RecordLookupTask(addressesSublist)) {
+                    primerThreads.submit(new FutureTask<List<Either<Exception, P2<K, V>>>>(new RecordLookupTask(addressesSublist)) {
                         @Override
                         protected void done() {
                             try {
@@ -362,16 +346,16 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             }
         }, "RecordLookupTaskSubmitterThread").start();
 
-        return new Iterator<Either<Exception, P2<K,V>>>() {
+        return new Iterator<Either<Exception, P2<K, V>>>() {
 
-            Iterator<Either<Exception, P2<K,V>>> currentIterator;
+            Iterator<Either<Exception, P2<K, V>>> currentIterator;
 
             @Override
             public boolean hasNext() {
                 if (currentIterator != null && currentIterator.hasNext()) return true;
                 while (taskSubmitterRunning.get() || runningTasks.get() > 0) {
                     try {
-                        final List<Either<Exception, P2<K,V>>> list = completionQueue.poll(1, TimeUnit.SECONDS);
+                        final List<Either<Exception, P2<K, V>>> list = completionQueue.poll(1, TimeUnit.SECONDS);
                         if (list != null) {
                             log.debug("remaining: " + runningTasks.decrementAndGet());
                             currentIterator = list.iterator();
@@ -387,7 +371,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             }
 
             @Override
-            public Either<Exception, P2<K,V>> next() {
+            public Either<Exception, P2<K, V>> next() {
                 return currentIterator.next();
             }
 
@@ -398,57 +382,21 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
         };
     }
 
-    private final class RecordLookupTask implements Callable<List<Either<Exception, P2<K,V>>>> {
-
-        private final List<Long> addresses;
-
-        private RecordLookupTask(List<Long> addresses) {
-            this.addresses = addresses;
-        }
-
-        @Override
-        public List<Either<Exception, P2<K,V>>> call() {
-            final List<Either<Exception, P2<K,V>>> ret = Lists.newArrayList();
-            for (Long address : addresses) {
-                try {
-                    Put<K, V> put = null;
-                    try {
-                        put = lookupAddress(null, address);
-                    } catch (Exception e) {
-                        log.info("exception looking up address: " + address + ", attempting repair", e);
-                        reindex(address);
-                        log.info("reindex successful");
-                    }
-                    if (put != null) {
-                        ret.add(Right.<Exception, P2<K,V>>of(P.p(put.getKey(), put.getValue())));
-                    } else {
-                        throw new IOException("record for address " + address + " does not exist for some reason");
-                    }
-                } catch (Exception e) {
-                    ret.add(Left.<Exception, P2<K, V>>of(e));
-                }
-            }
-            return ret;
-        }
-    }
-
     /**
      * Repairs index for a record log segment by reindexing the addresses of any corrupted keys.
-     *
-     * @param address               address into a possibly corrupted record log
+     * @param address address into a possibly corrupted record log
      * @throws IndexReadException
      */
     private void reindex(long address) throws IndexReadException {
         final int segmentNum = recordLogDirectory.getSegmentNum(address);
         try {
-            final
-            Option<RecordFile.Reader<Operation>> option = recordLogDirectory.getFileReader(segmentNum);
+            final Option<RecordFile.Reader<Operation>> option = recordLogDirectory.getFileReader(segmentNum);
             for (RecordFile.Reader<Operation> reader : option) {
                 try {
                     while (reader.next()) {
                         final Operation op = reader.get();
                         if (op.getClass() == Put.class) {
-                            final Put<K, V> put = (Put<K, V>)op;
+                            final Put<K, V> put = (Put<K, V>) op;
                             final K key = put.getKey();
                             final long position = reader.getPosition();
                             synchronized (index) {
@@ -476,14 +424,13 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             log.error("error", e);
             throw e;
         } catch (Exception e) {
-            log.error("error reindexing segment number "+segmentNum, e);
+            log.error("error reindexing segment number " + segmentNum, e);
         }
         repairedSegments.incrementAndGet();
     }
 
     /**
      * Update functions to be registered with a {@link RecordLogDirectoryPoller}
-     *
      * @return callback functions
      */
     @Override
@@ -493,8 +440,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
 
     /**
      * Close the cache.
-     *
-     * @throws IOException  if an I/O error occurs
+     * @throws IOException if an I/O error occurs
      */
     @Override
     public void close() throws IOException {
@@ -503,14 +449,13 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
 
     /**
      * Blocks until compactions are complete.
-     *
      * @throws InterruptedException when interrupted during operation
      */
     public void waitForCompactions() throws InterruptedException {
         index.waitForCompactions();
     }
 
-    public static class Builder<K,V> {
+    public static class Builder<K, V> {
         private File indexDir;
         private File checkpointDir;
         private Serializer<K> keySerializer;
@@ -523,12 +468,12 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
         private boolean mlockBloomFilters = false;
         private long bloomFilterMemory = -1;
 
-        public PersistentRecordCache<K,V> build() throws IOException {
+        public PersistentRecordCache<K, V> build() throws IOException {
             if (indexDir == null) throw new IllegalArgumentException("indexDir must be set");
             if (recordLogDirectory == null) throw new IllegalArgumentException("fileCache must be set");
             if (keySerializer == null) throw new IllegalArgumentException("keySerializer must be set");
             StoreBuilder<K, Long> indexBuilder = new StoreBuilder(indexDir, keySerializer, new LongSerializer());
-            indexBuilder.setMaxVolatileGenerationSize(8*1024*1024);
+            indexBuilder.setMaxVolatileGenerationSize(8 * 1024 * 1024);
             indexBuilder.setStorageType(StorageType.INLINE);
             indexBuilder.setComparator(comparator);
             indexBuilder.setDedicatedPartition(dedicatedIndexPartition);
@@ -540,27 +485,27 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             return new PersistentRecordCache<K, V>(index, recordLogDirectory, checkpointDir);
         }
 
-        public Builder<K,V> setIndexDir(final File indexDir) {
+        public Builder<K, V> setIndexDir(final File indexDir) {
             this.indexDir = indexDir;
             return this;
         }
 
-        public Builder<K,V> setKeySerializer(final Serializer<K> keySerializer) {
+        public Builder<K, V> setKeySerializer(final Serializer<K> keySerializer) {
             this.keySerializer = keySerializer;
             return this;
         }
 
-        public Builder<K,V> setComparator(final Comparator<K> comparator) {
+        public Builder<K, V> setComparator(final Comparator<K> comparator) {
             this.comparator = comparator;
             return this;
         }
 
-        public Builder<K,V> setRecordLogDirectory(final RecordLogDirectory<Operation> recordLogDirectory) {
+        public Builder<K, V> setRecordLogDirectory(final RecordLogDirectory<Operation> recordLogDirectory) {
             this.recordLogDirectory = recordLogDirectory;
             return this;
         }
 
-        public Builder<K,V> setCheckpointDir(final File checkpointDir) {
+        public Builder<K, V> setCheckpointDir(final File checkpointDir) {
             this.checkpointDir = checkpointDir;
             return this;
         }
@@ -569,7 +514,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             return dedicatedIndexPartition;
         }
 
-        public Builder<K,V> setDedicatedIndexPartition(final boolean dedicatedIndexPartition) {
+        public Builder<K, V> setDedicatedIndexPartition(final boolean dedicatedIndexPartition) {
             this.dedicatedIndexPartition = dedicatedIndexPartition;
             return this;
         }
@@ -578,7 +523,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             return mlockIndex;
         }
 
-        public Builder<K,V> setMlockIndex(final boolean mlockIndex) {
+        public Builder<K, V> setMlockIndex(final boolean mlockIndex) {
             this.mlockIndex = mlockIndex;
             return this;
         }
@@ -587,7 +532,7 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             return mlockBloomFilters;
         }
 
-        public Builder<K,V> setMlockBloomFilters(final boolean mlockBloomFilters) {
+        public Builder<K, V> setMlockBloomFilters(final boolean mlockBloomFilters) {
             this.mlockBloomFilters = mlockBloomFilters;
             return this;
         }
@@ -596,9 +541,43 @@ public final class PersistentRecordCache<K, V> implements RecordCache<K, V> {
             return bloomFilterMemory;
         }
 
-        public Builder<K,V> setBloomFilterMemory(final long bloomFilterMemory) {
+        public Builder<K, V> setBloomFilterMemory(final long bloomFilterMemory) {
             this.bloomFilterMemory = bloomFilterMemory;
             return this;
+        }
+    }
+
+    private final class RecordLookupTask implements Callable<List<Either<Exception, P2<K, V>>>> {
+
+        private final List<Long> addresses;
+
+        private RecordLookupTask(List<Long> addresses) {
+            this.addresses = addresses;
+        }
+
+        @Override
+        public List<Either<Exception, P2<K, V>>> call() {
+            final List<Either<Exception, P2<K, V>>> ret = Lists.newArrayList();
+            for (Long address : addresses) {
+                try {
+                    Put<K, V> put = null;
+                    try {
+                        put = lookupAddress(null, address);
+                    } catch (Exception e) {
+                        log.info("exception looking up address: " + address + ", attempting repair", e);
+                        reindex(address);
+                        log.info("reindex successful");
+                    }
+                    if (put != null) {
+                        ret.add(Right.<Exception, P2<K, V>>of(P.p(put.getKey(), put.getValue())));
+                    } else {
+                        throw new IOException("record for address " + address + " does not exist for some reason");
+                    }
+                } catch (Exception e) {
+                    ret.add(Left.<Exception, P2<K, V>>of(e));
+                }
+            }
+            return ret;
         }
     }
 }

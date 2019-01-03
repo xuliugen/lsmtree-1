@@ -11,18 +11,14 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache.tools;
+package com.indeed.lsmtree.recordcache.tools;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.indeed.util.compress.CompressionCodec;
-import com.indeed.lsmtree.recordcache.Checkpoint;
-import com.indeed.lsmtree.recordcache.Delete;
-import com.indeed.lsmtree.recordcache.Operation;
-import com.indeed.lsmtree.recordcache.OperationSerializer;
-import com.indeed.lsmtree.recordcache.Put;
+import com.indeed.lsmtree.recordcache.*;
 import com.indeed.lsmtree.recordlog.BlockCompressedRecordFile;
 import com.indeed.lsmtree.recordlog.RecordFile;
+import com.indeed.util.compress.CompressionCodec;
 import com.indeed.util.serialization.Serializer;
 import com.indeed.util.serialization.Stringifier;
 import org.apache.log4j.Logger;
@@ -41,7 +37,7 @@ public final class OperationLogCat {
 
     private static final Logger log = Logger.getLogger(OperationLogCat.class);
 
-    public static <K,V> void cat(
+    public static <K, V> void cat(
             File file,
             CompressionCodec codec,
             Serializer<K> keySerizlizer,
@@ -65,17 +61,17 @@ public final class OperationLogCat {
             map.put("position", String.valueOf(reader.getPosition()));
             map.put("type", op.getClass().getSimpleName());
             if (op.getClass() == Put.class) {
-                Put<K,V> put = (Put<K, V>)op;
+                Put<K, V> put = (Put<K, V>) op;
                 map.put("key", keyStringifier.toString(put.getKey()));
                 map.put("value", valueStringifier.toString(put.getValue()));
             } else if (op.getClass() == Delete.class) {
-                Delete<K> delete = (Delete<K>)op;
+                Delete<K> delete = (Delete<K>) op;
                 for (K key : delete.getKeys()) {
                     keys.add(key);
                 }
                 map.put("keys", keys);
             } else if (op.getClass() == Checkpoint.class) {
-                Checkpoint checkpoint = (Checkpoint)op;
+                Checkpoint checkpoint = (Checkpoint) op;
                 map.put("timestamp", checkpoint.getTimestamp());
             }
             System.out.println(mapper.writeValueAsString(map));

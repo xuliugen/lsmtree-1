@@ -11,16 +11,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordlog;
+package com.indeed.lsmtree.recordlog;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import com.indeed.util.io.BufferedFileDataOutputStream;
 import com.indeed.util.io.UnsafeByteArrayOutputStream;
-import com.indeed.util.serialization.Serializer;
 import com.indeed.util.mmap.MMapBuffer;
 import com.indeed.util.mmap.Memory;
 import com.indeed.util.mmap.MemoryDataInput;
+import com.indeed.util.serialization.Serializer;
 import fj.data.Option;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.log4j.Logger;
@@ -43,7 +43,7 @@ public final class BasicRecordFile<E> implements RecordFile<E> {
     private static final Logger log = Logger.getLogger(BasicRecordFile.class);
 
     final MMapBuffer buffer;
-    
+
     final Memory memory;
 
     private final File file;
@@ -65,7 +65,8 @@ public final class BasicRecordFile<E> implements RecordFile<E> {
     @Override
     public E get(long address) throws IOException {
         Option<E> option = readAndCheck(address, null);
-        if (option.isNone()) throw new IOException("there is not a valid record at address "+address+" in file "+file.getAbsolutePath());
+        if (option.isNone())
+            throw new IOException("there is not a valid record at address " + address + " in file " + file.getAbsolutePath());
         return option.some();
     }
 
@@ -78,35 +79,71 @@ public final class BasicRecordFile<E> implements RecordFile<E> {
     public RecordFile.Reader<E> reader(long address) throws IOException {
         return new Reader(address);
     }
-    
+
     private Option<E> readAndCheck(long address, MutableLong nextElementStart) throws IOException {
-        if (address+4 > memory.length()) {
+        if (address + 4 > memory.length()) {
             throw new ConsistencyException("not enough bytes in file");
         }
         final int length = memory.getInt(address);
         if (length < 0) {
             return Option.none();
         }
-        if (address+8 > memory.length()) {
+        if (address + 8 > memory.length()) {
             throw new ConsistencyException("not enough bytes in file");
         }
-        if (address+8+length > memory.length()) {
+        if (address + 8 + length > memory.length()) {
             throw new ConsistencyException("not enough bytes in file");
         }
-        final int checksum = memory.getInt(address+4);
+        final int checksum = memory.getInt(address + 4);
         MemoryDataInput in = new MemoryDataInput(memory);
-        in.seek(address+8);
+        in.seek(address + 8);
         CRC32 crc32 = new CRC32();
         crc32.update(CRC_SEED);
         byte[] bytes = new byte[length];
         in.readFully(bytes);
         crc32.update(bytes);
-        if ((int)crc32.getValue() != checksum) {
-            throw new ConsistencyException("checksum for record does not match: expected "+checksum+" actual "+(int)crc32.getValue());
+        if ((int) crc32.getValue() != checksum) {
+            throw new ConsistencyException("checksum for record does not match: expected " + checksum + " actual " + (int) crc32.getValue());
         }
         E ret = serializer.read(ByteStreams.newDataInput(bytes));
-        if (nextElementStart != null) nextElementStart.setValue(address+8+length);
+        if (nextElementStart != null) nextElementStart.setValue(address + 8 + length);
         return Option.some(ret);
+    }
+
+    public static final class Writer<E> implements RecordFile.Writer<E> {
+
+        final BufferedFileDataOutputStream out;
+        private final Serializer<E> serializer;
+
+        public Writer(File file, Serializer<E> serializer) throws FileNotFoundException {
+            this.serializer = serializer;
+            out = new BufferedFileDataOutputStream(file, ByteOrder.BIG_ENDIAN, 65536);
+        }
+
+        @Override
+        public long append(final E entry) throws IOException {
+            UnsafeByteArrayOutputStream bytes = new UnsafeByteArrayOutputStream();
+            serializer.write(entry, new DataOutputStream(bytes));
+            final long start = out.position();
+            out.writeInt(bytes.size());
+            final CRC32 checksum = new CRC32();
+            checksum.update(CRC_SEED);
+            checksum.update(bytes.getByteArray(), 0, bytes.size());
+            out.writeInt((int) checksum.getValue());
+            out.write(bytes.getByteArray(), 0, bytes.size());
+            return start;
+        }
+
+        @Override
+        public void close() throws IOException {
+            out.writeInt(-1);
+            out.sync();
+            out.close();
+        }
+
+        public void sync() throws IOException {
+            out.sync();
+        }
     }
 
     private final class Reader implements RecordFile.Reader<E> {
@@ -134,7 +171,7 @@ public final class BasicRecordFile<E> implements RecordFile<E> {
                 e = option.some();
             } catch (ConsistencyException e) {
                 done = true;
-                log.warn("reading next record in "+file.getAbsolutePath()+" failed with exception", e);
+                log.warn("reading next record in " + file.getAbsolutePath() + " failed with exception", e);
                 return false;
             }
             return true;
@@ -151,42 +188,7 @@ public final class BasicRecordFile<E> implements RecordFile<E> {
         }
 
         @Override
-        public void close() throws IOException {}
-    }
-
-    public static final class Writer<E> implements RecordFile.Writer<E> {
-
-        final BufferedFileDataOutputStream out;
-        private final Serializer<E> serializer;
-
-        public Writer(File file, Serializer<E> serializer) throws FileNotFoundException {
-            this.serializer = serializer;
-            out = new BufferedFileDataOutputStream(file, ByteOrder.BIG_ENDIAN, 65536);
-        }
-
-        @Override
-        public long append(final E entry) throws IOException {
-            UnsafeByteArrayOutputStream bytes = new UnsafeByteArrayOutputStream();
-            serializer.write(entry, new DataOutputStream(bytes));
-            final long start = out.position();
-            out.writeInt(bytes.size());
-            final CRC32 checksum = new CRC32();
-            checksum.update(CRC_SEED);
-            checksum.update(bytes.getByteArray(), 0, bytes.size());
-            out.writeInt((int)checksum.getValue());
-            out.write(bytes.getByteArray(), 0, bytes.size());
-            return start;
-        }
-
-        @Override
         public void close() throws IOException {
-            out.writeInt(-1);
-            out.sync();
-            out.close();
-        }
-
-        public void sync() throws IOException {
-            out.sync();
         }
     }
 }

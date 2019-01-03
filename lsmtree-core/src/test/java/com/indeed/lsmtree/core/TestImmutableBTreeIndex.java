@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -26,11 +26,7 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -66,13 +62,13 @@ public final class TestImmutableBTreeIndex extends TestCase {
         final int[] ints = new int[treeSize];
         int previous = 0;
         for (int i = 0; i < ints.length; i++) {
-            ints[i] = previous+r.nextInt(10)+1;
+            ints[i] = previous + r.nextInt(10) + 1;
             previous = ints[i];
         }
         Iterator<Generation.Entry<Integer, Long>> iterator = new Iterator<Generation.Entry<Integer, Long>>() {
 
             int index = 0;
-            
+
             @Override
             public boolean hasNext() {
                 return index < ints.length;
@@ -119,7 +115,7 @@ public final class TestImmutableBTreeIndex extends TestCase {
     public void testRandom() throws Exception {
         final int[] ints = createTree();
         final ImmutableBTreeIndex.Reader<Integer, Long> reader = new ImmutableBTreeIndex.Reader(tmpDir, new IntSerializer(), new LongSerializer(), false);
-        final int max = ints[ints.length-1];
+        final int max = ints[ints.length - 1];
         final AtomicInteger done = new AtomicInteger(8);
         for (int i = 0; i < 8; i++) {
             final int index = i;
@@ -129,17 +125,17 @@ public final class TestImmutableBTreeIndex extends TestCase {
                     try {
                         final Random r = new Random(index);
                         for (int i = 0; i < treeSize; i++) {
-                            int rand = r.nextInt(max+1);
+                            int rand = r.nextInt(max + 1);
                             int insertionindex = Arrays.binarySearch(ints, rand);
                             final Iterator<Generation.Entry<Integer, Long>> iterator = reader.iterator(rand, true);
                             try {
                                 assertTrue(iterator.hasNext());
                             } catch (Throwable t) {
-                                System.err.println("rand: "+rand);
+                                System.err.println("rand: " + rand);
                                 throw Throwables.propagate(t);
                             }
                             Generation.Entry<Integer, Long> entry = iterator.next();
-                            assertTrue("entry: "+entry+" rand: "+rand, entry.getKey() >= rand);
+                            assertTrue("entry: " + entry + " rand: " + rand, entry.getKey() >= rand);
                             assertTrue(entry.getKey().longValue() == entry.getValue());
                             if (insertionindex >= 0) {
                                 assertTrue(rand == ints[insertionindex]);
@@ -147,8 +143,8 @@ public final class TestImmutableBTreeIndex extends TestCase {
                                 Generation.Entry<Integer, Long> result = reader.get(rand);
                                 assertTrue(result.getValue() == rand);
                             } else {
-                                if (insertionindex != -1) assertTrue(ints[(~insertionindex)-1] < rand);
-                                assertTrue("insertionindex: "+insertionindex+" entry: "+entry+" ints[!insertionindex]"+ints[~insertionindex], ints[~insertionindex] == entry.getKey());
+                                if (insertionindex != -1) assertTrue(ints[(~insertionindex) - 1] < rand);
+                                assertTrue("insertionindex: " + insertionindex + " entry: " + entry + " ints[!insertionindex]" + ints[~insertionindex], ints[~insertionindex] == entry.getKey());
                                 Generation.Entry<Integer, Long> result = reader.get(rand);
                                 assertTrue(result == null);
                             }
@@ -169,7 +165,7 @@ public final class TestImmutableBTreeIndex extends TestCase {
         int[] ints = createTree();
         ImmutableBTreeIndex.Reader<Integer, Long> reader = new ImmutableBTreeIndex.Reader(tmpDir, new IntSerializer(), new LongSerializer(), false);
         int index = 0;
-        for (int i = 0; i <= ints[ints.length-1]; i++) {
+        for (int i = 0; i <= ints[ints.length - 1]; i++) {
             int current = ints[index];
             if (i > current) {
                 index++;
@@ -192,7 +188,7 @@ public final class TestImmutableBTreeIndex extends TestCase {
     public void testSeekPrevious() throws Exception {
         final int[] ints = createTree();
         final ImmutableBTreeIndex.Reader<Integer, Long> reader = new ImmutableBTreeIndex.Reader(tmpDir, new IntSerializer(), new LongSerializer(), false);
-        final int max = ints[ints.length-1];
+        final int max = ints[ints.length - 1];
         final AtomicInteger done = new AtomicInteger(8);
         for (int i = 0; i < 8; i++) {
             final int index = i;
@@ -202,12 +198,12 @@ public final class TestImmutableBTreeIndex extends TestCase {
                     try {
                         final Random r = new Random(index);
                         for (int i = 0; i < treeSize; i++) {
-                            int rand = r.nextInt(max+10);
+                            int rand = r.nextInt(max + 10);
                             int insertionindex = Arrays.binarySearch(ints, rand);
                             final Iterator<Generation.Entry<Integer, Long>> iterator = reader.reverseIterator(rand, true);
                             final boolean hasPrevious = iterator.hasNext();
                             Generation.Entry<Integer, Long> entry = null;
-                            assertEquals("rand: "+rand+" hasPrevious: "+hasPrevious+(hasPrevious ? " previous: "+(entry = iterator.next()) : ""), hasPrevious, insertionindex != -1);
+                            assertEquals("rand: " + rand + " hasPrevious: " + hasPrevious + (hasPrevious ? " previous: " + (entry = iterator.next()) : ""), hasPrevious, insertionindex != -1);
                             if (hasPrevious) {
                                 if (entry == null) entry = iterator.next();
                                 assertTrue(entry.getKey() <= rand);
@@ -221,8 +217,8 @@ public final class TestImmutableBTreeIndex extends TestCase {
                                 assertTrue(result.getValue() == rand);
                             } else {
                                 if (hasPrevious) {
-                                    assertTrue(ints[(~insertionindex)-1] < rand);
-                                    assertTrue(ints[(~insertionindex)-1] == entry.getKey());
+                                    assertTrue(ints[(~insertionindex) - 1] < rand);
+                                    assertTrue(ints[(~insertionindex) - 1] == entry.getKey());
                                 }
                                 Generation.Entry<Integer, Long> result = reader.get(rand);
                                 assertTrue(result == null);
@@ -254,6 +250,7 @@ public final class TestImmutableBTreeIndex extends TestCase {
         Arrays.sort(strings);
         Iterator<Generation.Entry<String, Long>> iterator = new AbstractIterator<Generation.Entry<String, Long>>() {
             int index = 0;
+
             @Override
             protected Generation.Entry<String, Long> computeNext() {
                 if (index >= strings.length) return endOfData();

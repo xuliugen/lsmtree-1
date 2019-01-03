@@ -11,16 +11,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core.iteratee;
+package com.indeed.lsmtree.core.iteratee;
 
 /**
  * @author jplaisance
  */
 public interface Input<E> {
-    
-    public <Z> Z match(Matcher<E,Z> matcher);
 
-    public static abstract class Matcher<E,Z> {
+    public <Z> Z match(Matcher<E, Z> matcher);
+
+    public static abstract class Matcher<E, Z> {
         public Z eof() {
             return otherwise();
         }

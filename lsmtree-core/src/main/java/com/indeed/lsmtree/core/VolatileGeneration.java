@@ -11,24 +11,18 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Ordering;
 import com.google.common.io.ByteStreams;
-import com.indeed.util.core.io.Closeables2;
 import com.indeed.util.core.reference.SharedReference;
 import com.indeed.util.io.BufferedFileDataOutputStream;
 import com.indeed.util.serialization.Serializer;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.io.BufferedInputStream;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,7 +31,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 /**
  * @author jplaisance
  */
-public final class VolatileGeneration<K, V> implements Generation<K,V> {
+public final class VolatileGeneration<K, V> implements Generation<K, V> {
 
     private static final Logger log = Logger.getLogger(VolatileGeneration.class);
 
@@ -52,7 +46,7 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
     private final Serializer<K> keySerializer;
 
     private final Serializer<V> valueSerializer;
-    
+
     private final Ordering<K> ordering;
 
     private final SharedReference<Closeable> stuffToClose;
@@ -69,14 +63,15 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
         this.valueSerializer = valueSerializer;
         deleted = new Object();
         if (loadExistingReadOnly) {
-            if (!logPath.exists()) throw new IllegalArgumentException(logPath.getAbsolutePath()+" does not exist");
+            if (!logPath.exists()) throw new IllegalArgumentException(logPath.getAbsolutePath() + " does not exist");
             transactionLog = null;
             replayTransactionLog(logPath, true);
         } else {
-            if (logPath.exists()) throw new IllegalArgumentException("to load existing logs set loadExistingReadOnly to true or create a new log and use replayTransactionLog");
+            if (logPath.exists())
+                throw new IllegalArgumentException("to load existing logs set loadExistingReadOnly to true or create a new log and use replayTransactionLog");
             transactionLog = new TransactionLog.Writer(logPath, keySerializer, valueSerializer, false);
         }
-        stuffToClose = SharedReference.create((Closeable)new Closeable() {
+        stuffToClose = SharedReference.create((Closeable) new Closeable() {
             public void close() throws IOException {
                 closeWriter();
             }
@@ -129,7 +124,7 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
         final Object value = map.get(key);
         if (value == null) return null;
         if (value == deleted) return Entry.createDeleted(key);
-        return Entry.create(key, (V)value);
+        return Entry.create(key, (V) value);
     }
 
     @Override
@@ -206,7 +201,7 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
                 key = entry.getKey();
                 final Object value = entry.getValue();
                 if (value == deleted) return Entry.createDeleted(key);
-                return Entry.create(key, (V)value);
+                return Entry.create(key, (V) value);
             }
         };
     }
@@ -244,7 +239,7 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
                 key = entry.getKey();
                 final Object value = entry.getValue();
                 if (value == deleted) return Entry.createDeleted(key);
-                return Entry.create(key, (V)value);
+                return Entry.create(key, (V) value);
             }
         };
     }
@@ -271,7 +266,7 @@ public final class VolatileGeneration<K, V> implements Generation<K,V> {
 
     @Override
     public void delete() throws IOException {
-        log.info("deleting "+getPath());
+        log.info("deleting " + getPath());
         getPath().delete();
     }
 

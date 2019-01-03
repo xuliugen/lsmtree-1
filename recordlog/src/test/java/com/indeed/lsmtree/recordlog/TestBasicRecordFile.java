@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordlog;
+package com.indeed.lsmtree.recordlog;
 
 import com.indeed.util.serialization.array.ByteArraySerializer;
 import junit.framework.TestCase;
@@ -44,14 +44,14 @@ public final class TestBasicRecordFile extends TestCase {
             for (i = 0; i < 100000; i++) {
                 byte[] bytes = new byte[rand.nextInt(100)];
                 for (int j = 0; j < bytes.length; j++) {
-                    bytes[j] = (byte)rand.nextInt();
+                    bytes[j] = (byte) rand.nextInt();
                 }
-                assertTrue("read failed on iteration "+i, reader.next());
+                assertTrue("read failed on iteration " + i, reader.next());
                 assertTrue(Arrays.equals(reader.get(), bytes));
             }
             assertFalse(reader.next());
         } catch (IOException e) {
-            log.error("read failed on iteration "+i, e);
+            log.error("read failed on iteration " + i, e);
             throw e;
         }
         rand = new Random(0);
@@ -59,12 +59,12 @@ public final class TestBasicRecordFile extends TestCase {
             for (i = 0; i < 100000; i++) {
                 byte[] bytes = new byte[rand.nextInt(100)];
                 for (int j = 0; j < bytes.length; j++) {
-                    bytes[j] = (byte)rand.nextInt();
+                    bytes[j] = (byte) rand.nextInt();
                 }
                 assertTrue(Arrays.equals(recordFile.get(addresses[i]), bytes));
             }
         } catch (IOException e) {
-            log.error("read failed on iteration "+i, e);
+            log.error("read failed on iteration " + i, e);
             throw e;
         }
         reader.close();
@@ -78,7 +78,7 @@ public final class TestBasicRecordFile extends TestCase {
         for (int i = 0; i < 100000; i++) {
             byte[] bytes = new byte[rand.nextInt(100)];
             for (int j = 0; j < bytes.length; j++) {
-                bytes[j] = (byte)rand.nextInt();
+                bytes[j] = (byte) rand.nextInt();
             }
             addresses[i] = writer.append(bytes);
         }

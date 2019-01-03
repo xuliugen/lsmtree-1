@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -28,12 +28,7 @@ import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -91,17 +86,17 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
                     }
                 }
                 if (op.getClass() == Put.class) {
-                    final Put<A, B> put = (Put)op;
+                    final Put<A, B> put = (Put) op;
                     final long start = System.nanoTime();
                     memcache.putInCache(aToCFunction.f(put.getKey()), valueMapFunction.f(put.getValue()), false);
-                    memcachedPutTime.addAndGet(System.nanoTime()-start);
+                    memcachedPutTime.addAndGet(System.nanoTime() - start);
                     memcachedPuts.incrementAndGet();
                 } else if (op.getClass() == Delete.class) {
-                    final Delete<A> delete = (Delete)op;
+                    final Delete<A> delete = (Delete) op;
                     for (A a : delete.getKeys()) {
                         final long start = System.nanoTime();
                         memcache.delete(aToCFunction.f(a));
-                        memcachedDeleteTime.addAndGet(System.nanoTime()-start);
+                        memcachedDeleteTime.addAndGet(System.nanoTime() - start);
                         memcachedDeletes.incrementAndGet();
                     }
                 } else if (op.getClass() == Checkpoint.class) {
@@ -112,7 +107,8 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
             }
 
             @Override
-            public void sync() throws IOException {}
+            public void sync() throws IOException {
+            }
         };
     }
 
@@ -133,19 +129,19 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
                 if (!results.containsKey(key)) {
                     missingKeys.add(cToAFunction.f(key));
                     synchronized (memcacheMissCounter) {
-                       memcacheMissCounter.increment();
+                        memcacheMissCounter.increment();
                     }
                 }
             }
-            if (missingKeys.size() > 0) log.info("memcached misses: "+missingKeys);
+            if (missingKeys.size() > 0) log.info("memcached misses: " + missingKeys);
             final Map<A, B> baseCacheResults = baseCache.getAll(missingKeys, cacheStats);
             for (A a : missingKeys) {
                 final B b = baseCacheResults.get(a);
                 if (b == null) {
                     synchronized (lsmTreeMissCounter) {
-                       lsmTreeMissCounter.increment();
+                        lsmTreeMissCounter.increment();
                     }
-                    log.warn("key "+aToCFunction.f(a)+" not found in underlying store");
+                    log.warn("key " + aToCFunction.f(a) + " not found in underlying store");
                     continue;
                 }
                 final C c = aToCFunction.f(a);
@@ -154,10 +150,10 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
                 memcache.putInCache(c, d, true);
             }
         }
-        cacheStats.persistentStoreHits = results.size()-size;
+        cacheStats.persistentStoreHits = results.size() - size;
         log.debug("persistent store hits: " + (results.size() - size));
-        cacheStats.misses = keys.size()-results.size();
-        log.debug("misses: "+(keys.size()-results.size()));
+        cacheStats.misses = keys.size() - results.size();
+        log.debug("misses: " + (keys.size() - results.size()));
         return results;
     }
 
@@ -207,7 +203,7 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
                 }
             }
         });
-        final Iterator<Either<Exception,P2<A,B>>> streaming = baseCache.getStreaming(iterator, status != null ? status.primerProgress : null, status != null ? status.primerSkipped : null);
+        final Iterator<Either<Exception, P2<A, B>>> streaming = baseCache.getStreaming(iterator, status != null ? status.primerProgress : null, status != null ? status.primerSkipped : null);
         log.info("store lookup iterator initialized");
         log.info("starting store lookups");
         while (streaming.hasNext()) {
@@ -250,7 +246,7 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
         return lsmTreeMissCounter.toString();
     }
 
-    public static final class Builder<A,B,C,D> {
+    public static final class Builder<A, B, C, D> {
         private Stringifier<C> keyStringifier;
         private Serializer<C> keySerializer;
         private Serializer<D> valueSerializer;
@@ -262,7 +258,7 @@ public final class MemcachedMappingRecordCache<A, B, C, D> implements RecordCach
         private F<C, A> cToAFunction;
         private F<B, D> valueMapFunction;
 
-        public MemcachedMappingRecordCache<A,B,C,D> build() throws IOException {
+        public MemcachedMappingRecordCache<A, B, C, D> build() throws IOException {
             if (keyStringifier == null) throw new IllegalArgumentException("keyStringifier must be set");
             if (keySerializer == null) throw new IllegalArgumentException("keySerializer must be set");
             if (valueSerializer == null) throw new IllegalArgumentException("valueSerializer must be set");

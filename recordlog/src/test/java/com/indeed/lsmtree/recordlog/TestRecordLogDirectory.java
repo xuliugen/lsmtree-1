@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordlog;
+package com.indeed.lsmtree.recordlog;
 
 import com.google.common.base.Charsets;
 import com.indeed.util.compress.CompressionCodec;
@@ -22,11 +22,7 @@ import junit.framework.TestCase;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,6 +48,11 @@ public final class TestRecordLogDirectory extends TestCase {
 
     private ArrayList<Long> positions;
 
+    public static CompressionCodec getCodec() {
+        final SnappyCodec snappyCodec = new SnappyCodec();
+        return snappyCodec;
+    }
+
     @Override
     public void setUp() throws Exception {
         tmpDir = File.createTempFile("tmp", "", new File("."));
@@ -62,11 +63,6 @@ public final class TestRecordLogDirectory extends TestCase {
     @Override
     public void tearDown() throws Exception {
         FileUtils.deleteDirectory(tmpDir);
-    }
-
-    public static CompressionCodec getCodec() {
-        final SnappyCodec snappyCodec = new SnappyCodec();
-        return snappyCodec;
     }
 
     public void testEmpty() throws Exception {
@@ -93,7 +89,7 @@ public final class TestRecordLogDirectory extends TestCase {
             assertTrue(reader.getPosition() == positions.get(index));
             index++;
         }
-        assertTrue(index+" != "+ strings.size(), index == strings.size());
+        assertTrue(index + " != " + strings.size(), index == strings.size());
         reader.close();
         Option<RecordFile.Reader<String>> option = recordLogDirectory.getFileReader(0);
         assertTrue(option.isSome());
@@ -181,7 +177,8 @@ public final class TestRecordLogDirectory extends TestCase {
                 in = new BufferedReader(new InputStreamReader(new FileInputStream("src/test/resources/enwiki-latest-stub-articles4.xml"), Charsets.UTF_8), 65536);
         strings = new ArrayList<String>();
         positions = new ArrayList<Long>();
-        outer: while (true) {
+        outer:
+        while (true) {
             for (int i = 0; i < 1000; i++) {
                 String line = in.readLine();
                 if (line == null) break outer;

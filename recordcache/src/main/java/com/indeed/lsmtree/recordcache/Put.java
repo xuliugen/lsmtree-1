@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import fj.P1;
 import org.apache.log4j.Logger;
@@ -19,7 +19,7 @@ import org.apache.log4j.Logger;
 /**
  * @author jplaisance
  */
-public final class Put<K,V> implements Operation {
+public final class Put<K, V> implements Operation {
 
     private static final Logger log = Logger.getLogger(Put.class);
 

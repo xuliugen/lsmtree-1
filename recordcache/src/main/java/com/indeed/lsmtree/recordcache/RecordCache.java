@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import java.io.Closeable;
 import java.util.Collection;
@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * @author jplaisance
  */
-public interface RecordCache<K,V> extends Closeable {
+public interface RecordCache<K, V> extends Closeable {
     public V get(K key, CacheStats cacheStats);
 
     public Map<K, V> getAll(Collection<K> keys, CacheStats cacheStats);

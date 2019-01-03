@@ -11,20 +11,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.google.common.io.Closer;
-import com.indeed.util.serialization.Serializer;
 import com.indeed.lsmtree.recordlog.BasicRecordFile;
 import com.indeed.lsmtree.recordlog.RecordFile;
+import com.indeed.util.serialization.Serializer;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * @author jplaisance
@@ -33,10 +29,36 @@ public final class TransactionLog {
 
     private static final Logger log = Logger.getLogger(TransactionLog.class);
 
+    public static enum TransactionType {
+        PUT(1),
+        DELETE(2);
+
+        int transactionTypeId;
+
+        TransactionType(final int transactionTypeId) {
+            this.transactionTypeId = transactionTypeId;
+        }
+
+        public static TransactionType getTransactionType(int transactionTypeId) {
+            switch (transactionTypeId) {
+                case 1:
+                    return PUT;
+                case 2:
+                    return DELETE;
+                default:
+                    throw new IllegalArgumentException(transactionTypeId + " is not a valid transactionTypeId");
+            }
+        }
+
+        public int getTransactionTypeId() {
+            return transactionTypeId;
+        }
+    }
+
     public static class Reader<K, V> implements Closeable {
 
         private final BasicRecordFile<OpKeyValue<K, V>> recordFile;
-        private final RecordFile.Reader<OpKeyValue<K,V>> reader;
+        private final RecordFile.Reader<OpKeyValue<K, V>> reader;
         private boolean done;
         private TransactionType type;
         private K key;
@@ -59,7 +81,7 @@ public final class TransactionLog {
                 done = true;
                 return false;
             }
-            final OpKeyValue<K,V> opKeyValue = reader.get();
+            final OpKeyValue<K, V> opKeyValue = reader.get();
             type = opKeyValue.type;
             key = opKeyValue.key;
             if (type == TransactionType.PUT) {
@@ -174,29 +196,6 @@ public final class TransactionLog {
         }
     }
 
-    public static enum TransactionType {
-        PUT(1),
-        DELETE(2);
-
-        int transactionTypeId;
-
-        public int getTransactionTypeId() {
-            return transactionTypeId;
-        }
-
-        TransactionType(final int transactionTypeId) {
-            this.transactionTypeId = transactionTypeId;
-        }
-
-        public static TransactionType getTransactionType(int transactionTypeId) {
-            switch(transactionTypeId) {
-                case 1 : return PUT;
-                case 2 : return DELETE;
-                default : throw new IllegalArgumentException(transactionTypeId+" is not a valid transactionTypeId");
-            }
-        }
-    }
-    
     private static final class OpKeyValue<K, V> {
         TransactionType type;
         K key;
@@ -208,9 +207,9 @@ public final class TransactionLog {
             this.value = value;
         }
     }
-    
-    private static final class OpKeyValueSerialzer<K,V> implements Serializer<OpKeyValue<K,V>> {
-        
+
+    private static final class OpKeyValueSerialzer<K, V> implements Serializer<OpKeyValue<K, V>> {
+
         Serializer<K> keySerializer;
         Serializer<V> valueSerializer;
 
@@ -223,7 +222,7 @@ public final class TransactionLog {
         public void write(OpKeyValue<K, V> kvOpKeyValue, DataOutput out) throws IOException {
             out.writeByte(kvOpKeyValue.type.getTransactionTypeId());
             keySerializer.write(kvOpKeyValue.key, out);
-            if (kvOpKeyValue.type ==TransactionType.PUT) {
+            if (kvOpKeyValue.type == TransactionType.PUT) {
                 valueSerializer.write(kvOpKeyValue.value, out);
             }
         }
@@ -240,5 +239,6 @@ public final class TransactionLog {
         }
     }
 
-    public static class LogClosedException extends Exception {}
+    public static class LogClosedException extends Exception {
+    }
 }

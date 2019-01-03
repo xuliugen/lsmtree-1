@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.indeed.util.serialization.IntSerializer;
 import com.indeed.util.serialization.LongSerializer;
@@ -26,8 +26,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
-* @author jplaisance
-*/
+ * @author jplaisance
+ */
 public final class TestZeroData extends TestCase {
 
     private static final Logger log = Logger.getLogger(TestZeroData.class);
@@ -73,7 +73,7 @@ public final class TestZeroData extends TestCase {
     public void testAllDeletedInYoungGeneration() throws IOException, TransactionLog.LogClosedException {
         VolatileGeneration<Integer, Long> generation = new VolatileGeneration<Integer, Long>(new File(tmpDir, "log1.log"), new IntSerializer(), new LongSerializer(), new ComparableComparator());
         for (int i = 0; i < 10000; i++) {
-            generation.put(i, (long)i);
+            generation.put(i, (long) i);
         }
         final File indexDir1 = new File(tmpDir, "indexdir1");
         ImmutableBTreeIndex.Writer.write(indexDir1, generation.iterator(), new IntSerializer(), new LongSerializer(), 65536, false);

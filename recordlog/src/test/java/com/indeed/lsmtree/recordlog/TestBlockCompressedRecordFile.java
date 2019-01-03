@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordlog;
+package com.indeed.lsmtree.recordlog;
 
 import com.google.common.base.Charsets;
 import com.indeed.util.compress.CompressionCodec;
@@ -43,6 +43,11 @@ public final class TestBlockCompressedRecordFile extends TestCase {
 
     private ArrayList<Long> positions;
 
+    public static CompressionCodec getCodec() {
+        final SnappyCodec snappyCodec = new SnappyCodec();
+        return snappyCodec;
+    }
+
     @Override
     public void setUp() throws Exception {
         tmpDir = File.createTempFile("tmp", "", new File("."));
@@ -53,11 +58,6 @@ public final class TestBlockCompressedRecordFile extends TestCase {
     @Override
     public void tearDown() throws Exception {
         FileUtils.deleteDirectory(tmpDir);
-    }
-
-    public static CompressionCodec getCodec() {
-        final SnappyCodec snappyCodec = new SnappyCodec();
-        return snappyCodec;
     }
 
     public void testEmpty() throws Exception {
@@ -157,7 +157,7 @@ public final class TestBlockCompressedRecordFile extends TestCase {
                 in = new BufferedReader(new InputStreamReader(TestBlockCompressedRecordFile.class.getClassLoader().getResourceAsStream("testinput.txt"), Charsets.UTF_8));
         strings = new ArrayList<String>();
         positions = new ArrayList<Long>();
-        for (String line; (line = in.readLine()) != null;) {
+        for (String line; (line = in.readLine()) != null; ) {
             positions.add(writer.append(line));
             strings.add(line);
         }

@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core;
+package com.indeed.lsmtree.core;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
@@ -22,12 +22,7 @@ import fj.F2;
 import fj.P2;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author jplaisance
@@ -38,6 +33,7 @@ public final class ItUtil {
     public static <A> Iterable<A> iterable(final Iterator<A> it) {
         return new Iterable<A>() {
             boolean used = false;
+
             @Override
             public Iterator<A> iterator() {
                 if (used) throw new IllegalStateException("iterator may not be called more than once");
@@ -58,7 +54,7 @@ public final class ItUtil {
         return iterable(it);
     }
 
-    public static <A,B> Iterator<B> map(final F<A,B> f, final Iterator<A> it) {
+    public static <A, B> Iterator<B> map(final F<A, B> f, final Iterator<A> it) {
         return new AbstractIterator<B>() {
             @Override
             protected B computeNext() {
@@ -69,7 +65,7 @@ public final class ItUtil {
         };
     }
 
-    public static <A,B> Iterable<B> map(final F<A,B> f, final Iterable<A> it) {
+    public static <A, B> Iterable<B> map(final F<A, B> f, final Iterable<A> it) {
         return new Iterable<B>() {
             @Override
             public Iterator<B> iterator() {
@@ -78,12 +74,12 @@ public final class ItUtil {
         };
     }
 
-    public static <A> Iterator<A> filter(final F<A,Boolean> f, final Iterator<A> it) {
+    public static <A> Iterator<A> filter(final F<A, Boolean> f, final Iterator<A> it) {
         return new AbstractIterator<A>() {
             @Override
             protected A computeNext() {
                 while (true) {
-                    if (it.hasNext()){
+                    if (it.hasNext()) {
                         A a = it.next();
                         if (f.f(a)) {
                             return a;
@@ -97,7 +93,7 @@ public final class ItUtil {
         };
     }
 
-    public static <A> Iterable<A> filter(final F<A,Boolean> f, final Iterable<A> it) {
+    public static <A> Iterable<A> filter(final F<A, Boolean> f, final Iterable<A> it) {
         return new Iterable<A>() {
             @Override
             public Iterator<A> iterator() {
@@ -106,26 +102,27 @@ public final class ItUtil {
         };
     }
 
-    public static <A,B> B fold(final F2<B,A,B> f, final B initial, final Iterable<A> it) {
+    public static <A, B> B fold(final F2<B, A, B> f, final B initial, final Iterable<A> it) {
         B b = initial;
         for (A a : it) {
-            b = f.f(b,a);
+            b = f.f(b, a);
         }
         return b;
     }
 
-    public static <A,B> B fold(final F2<B,A,B> f, final B initial, final Iterator<A> it) {
+    public static <A, B> B fold(final F2<B, A, B> f, final B initial, final Iterator<A> it) {
         return fold(f, initial, iterable(it));
     }
 
-    public static <A> P2<Iterator<A>, Iterator<A>> span(final F<A,Boolean> f, final Iterator<A> it) {
+    public static <A> P2<Iterator<A>, Iterator<A>> span(final F<A, Boolean> f, final Iterator<A> it) {
         return new P2<Iterator<A>, Iterator<A>>() {
             PeekingIterator<A> peekingIterator = Iterators.peekingIterator(it);
             boolean firstDone = false;
             Iterator<A> first = new AbstractIterator<A>() {
                 @Override
                 protected A computeNext() {
-                    if (firstDone) throw new IllegalStateException("cannot access first iterator after second has been accessed");
+                    if (firstDone)
+                        throw new IllegalStateException("cannot access first iterator after second has been accessed");
                     if (peekingIterator.hasNext()) {
                         if (f.f(peekingIterator.peek())) {
                             return peekingIterator.next();
@@ -148,6 +145,7 @@ public final class ItUtil {
                     return null;
                 }
             };
+
             @Override
             public Iterator<A> _1() {
                 return first;
@@ -160,14 +158,15 @@ public final class ItUtil {
         };
     }
 
-    public static <A> P2<Iterator<A>, Iterator<A>> span(final F<A,Boolean> f, final Iterable<A> it) {
+    public static <A> P2<Iterator<A>, Iterator<A>> span(final F<A, Boolean> f, final Iterable<A> it) {
         return span(f, it.iterator());
     }
 
-    public static <A> Iterator<Iterator<A>> groupBy(final F2<A,A,Boolean> f, final Iterator<A> iterator) {
+    public static <A> Iterator<Iterator<A>> groupBy(final F2<A, A, Boolean> f, final Iterator<A> iterator) {
         return new AbstractIterator<Iterator<A>>() {
             PeekingIterator<A> it = Iterators.peekingIterator(iterator);
             InvalidatableIterator<A> prev = null;
+
             @Override
             protected Iterator<A> computeNext() {
                 if (it.hasNext()) {
@@ -178,6 +177,7 @@ public final class ItUtil {
                     prev = new InvalidatableIterator<A>() {
                         A a;
                         boolean initialized = false;
+
                         @Override
                         protected A computeNext1() {
                             if (!initialized) {
@@ -203,13 +203,14 @@ public final class ItUtil {
         };
     }
 
-    public static <A> Iterator<Iterator<A>> groupBy(final F2<A,A,Boolean> f, final Iterable<A> it) {
+    public static <A> Iterator<Iterator<A>> groupBy(final F2<A, A, Boolean> f, final Iterable<A> it) {
         return groupBy(f, it.iterator());
     }
 
     public static <A> Iterator<A> intersperse(final A a, final Iterator<A> it) {
         return new AbstractIterator<A>() {
             boolean b = false;
+
             @Override
             protected A computeNext() {
                 if (it.hasNext()) {
@@ -239,13 +240,13 @@ public final class ItUtil {
         return Iterables.concat(
                 intersperse(
                         iterable(a, true), iterable(map(
-                        new F<Iterator<A>, Iterable<A>>() {
-                            @Override
-                            public Iterable<A> f(final Iterator<A> aIterator) {
-                                return iterable(aIterator);
-                            }
-                        }, it
-                )))).iterator();
+                                new F<Iterator<A>, Iterable<A>>() {
+                                    @Override
+                                    public Iterable<A> f(final Iterator<A> aIterator) {
+                                        return iterable(aIterator);
+                                    }
+                                }, it
+                        )))).iterator();
     }
 
     public static <A> Iterator<Iterator<A>> partition(final Iterator<A> a, final int count) {
@@ -254,6 +255,7 @@ public final class ItUtil {
             protected Iterator<A> computeNext() {
                 return new AbstractIterator<A>() {
                     int c = 0;
+
                     @Override
                     protected A computeNext() {
                         if (c == count || !a.hasNext()) {
@@ -281,6 +283,7 @@ public final class ItUtil {
                                 public Iterator<A> iterator() {
                                     return new AbstractIterator<A>() {
                                         int c = 0;
+
                                         @Override
                                         protected A computeNext() {
                                             if (c == count || !it.hasNext()) {
@@ -299,23 +302,6 @@ public final class ItUtil {
                 };
             }
         };
-    }
-
-    private static abstract class InvalidatableIterator<E> extends AbstractIterator<E> {
-
-        private boolean invalid = false;
-
-        public final void invalidate() {
-            invalid = true;
-        }
-
-        @Override
-        protected final E computeNext() {
-            if (invalid) throw new IllegalStateException("iterator has been invalidated");
-            return computeNext1();
-        }
-
-        abstract protected E computeNext1();
     }
 
     public static <E> Iterator<E> merge(Collection<Iterator<E>> iterators, final Comparator<E> comparator) {
@@ -355,7 +341,7 @@ public final class ItUtil {
     }
 
     public static void main(String[] args) {
-        Integer[] ints = new Integer[]{1,1,1,2,2,3,3,3,3,4,4,5,5,6,7,8,9,10,10,11};
+        Integer[] ints = new Integer[]{1, 1, 1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 10, 11};
         List<Integer> intList = Arrays.asList(ints);
         final Iterator<Iterator<Integer>> it = groupBy(
                 new F2<Integer, Integer, Boolean>() {
@@ -369,18 +355,18 @@ public final class ItUtil {
         F<Iterator<Integer>, String> concat = new F<Iterator<Integer>, String>() {
             @Override
             public String f(final Iterator<Integer> integerIterator) {
-                return fold(new F2<String,String,String>(){
+                return fold(new F2<String, String, String>() {
                     @Override
                     public String f(final String s, final String s1) {
-                        return s+s1;
+                        return s + s1;
                     }
-                }, "",(intersperse(", ", map(new F<Integer, String>() {
+                }, "", (intersperse(", ", map(new F<Integer, String>() {
 
-                    @Override
-                    public String f(final Integer integer) {
-                        return String.valueOf(integer);
-                    }
-                }, integerIterator
+                                                  @Override
+                                                  public String f(final Integer integer) {
+                                                      return String.valueOf(integer);
+                                                  }
+                                              }, integerIterator
                 ))));
             }
         };
@@ -405,5 +391,22 @@ public final class ItUtil {
                 }, intList
         );
         System.out.println(concat.f(it2.iterator()));
+    }
+
+    private static abstract class InvalidatableIterator<E> extends AbstractIterator<E> {
+
+        private boolean invalid = false;
+
+        public final void invalidate() {
+            invalid = true;
+        }
+
+        @Override
+        protected final E computeNext() {
+            if (invalid) throw new IllegalStateException("iterator has been invalidated");
+            return computeNext1();
+        }
+
+        abstract protected E computeNext1();
     }
 }

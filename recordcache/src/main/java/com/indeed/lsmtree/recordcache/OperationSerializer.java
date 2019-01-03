@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.indeed.util.serialization.Serializer;
 import fj.P1;
@@ -25,7 +25,7 @@ import java.util.Collection;
 /**
  * @author jplaisance
  */
-public final class OperationSerializer<K,V> implements Serializer<Operation> {
+public final class OperationSerializer<K, V> implements Serializer<Operation> {
 
     private static final Logger log = Logger.getLogger(OperationSerializer.class);
 
@@ -49,15 +49,15 @@ public final class OperationSerializer<K,V> implements Serializer<Operation> {
     public void write(final Operation operation, final DataOutput out) throws IOException {
         if (operation.getClass() == Put.class) {
             out.writeByte(1);
-            Put<K,V> put = (Put)operation;
+            Put<K, V> put = (Put) operation;
             keySerializer.write(put.getKey(), out);
             valueSerializer.write(put.getValue(), out);
         } else if (operation.getClass() == Delete.class) {
             out.writeByte(2);
-            Delete<K> delete = (Delete)operation;
+            Delete<K> delete = (Delete) operation;
             keyCollectionSerializer.write(delete.getKeys(), out);
         } else if (operation.getClass() == Checkpoint.class) {
-            Checkpoint checkpoint = (Checkpoint)operation;
+            Checkpoint checkpoint = (Checkpoint) operation;
             out.writeByte(3);
             out.writeLong(checkpoint.getTimestamp());
         } else {
@@ -74,6 +74,7 @@ public final class OperationSerializer<K,V> implements Serializer<Operation> {
 
                     V v = null;
                     boolean initialized = false;
+
                     @Override
                     public synchronized V _1() {
                         if (initialized) return v;

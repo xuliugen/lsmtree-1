@@ -11,14 +11,14 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
-import com.indeed.util.compress.CompressionCodec;
-import com.indeed.util.compress.SnappyCodec;
 import com.indeed.lsmtree.core.StorageType;
 import com.indeed.lsmtree.core.Store;
 import com.indeed.lsmtree.core.StoreBuilder;
 import com.indeed.lsmtree.recordlog.RecordLogDirectory;
+import com.indeed.util.compress.CompressionCodec;
+import com.indeed.util.compress.SnappyCodec;
 import com.indeed.util.serialization.Serializer;
 import org.apache.log4j.Logger;
 
@@ -30,11 +30,11 @@ import java.util.Comparator;
 /**
  * @author jplaisance
  */
-public final class ReplicatingStoreBuilder<K,V> {
+public final class ReplicatingStoreBuilder<K, V> {
 
     private static final Logger log = Logger.getLogger(ReplicatingStoreBuilder.class);
 
-    private final StoreBuilder<K,V> storeBuilder;
+    private final StoreBuilder<K, V> storeBuilder;
 
     private final File recordsPath;
 
@@ -58,12 +58,12 @@ public final class ReplicatingStoreBuilder<K,V> {
         this.indexPath = indexPath;
     }
 
-    public ReplicatingStoreBuilder<K,V> setKeyCollectionSerializer(final Serializer<Collection<K>> keyCollectionSerializer) {
+    public ReplicatingStoreBuilder<K, V> setKeyCollectionSerializer(final Serializer<Collection<K>> keyCollectionSerializer) {
         this.keyCollectionSerializer = keyCollectionSerializer;
         return this;
     }
 
-    public ReplicatingStoreBuilder<K,V> setCodec(final CompressionCodec codec) {
+    public ReplicatingStoreBuilder<K, V> setCodec(final CompressionCodec codec) {
         this.codec = codec;
         return this;
     }
@@ -93,12 +93,12 @@ public final class ReplicatingStoreBuilder<K,V> {
         return this;
     }
 
-    public ReplicatingStoreBuilder<K,V> setStoreCodec(final CompressionCodec codec) {
+    public ReplicatingStoreBuilder<K, V> setStoreCodec(final CompressionCodec codec) {
         storeBuilder.setCodec(codec);
         return this;
     }
 
-    public ReplicatingStoreBuilder<K,V> setCheckpointDir(final File checkpointDir) {
+    public ReplicatingStoreBuilder<K, V> setCheckpointDir(final File checkpointDir) {
         this.checkpointDir = checkpointDir;
         return this;
     }
@@ -111,7 +111,7 @@ public final class ReplicatingStoreBuilder<K,V> {
         if (keyCollectionSerializer == null) {
             keyCollectionSerializer = new CollectionSerializer<K>(keySerializer);
         }
-        final Store<K,V> store = storeBuilder.build();
+        final Store<K, V> store = storeBuilder.build();
         final RecordLogDirectory recordLogDirectory =
                 new RecordLogDirectory.Builder<Operation>(
                         recordsPath,
@@ -128,18 +128,18 @@ public final class ReplicatingStoreBuilder<K,V> {
             @Override
             public void process(final long position, final Operation op) throws IOException {
                 if (op instanceof Put) {
-                    Put<K,V> put = (Put<K, V>)op;
+                    Put<K, V> put = (Put<K, V>) op;
                     store.put(put.getKey(), put.getValue());
                 } else if (op instanceof Delete) {
-                    Delete<K> delete = (Delete<K>)op;
+                    Delete<K> delete = (Delete<K>) op;
                     for (K key : delete.getKeys()) {
                         store.delete(key);
                     }
                 } else if (op instanceof Checkpoint) {
-                    Checkpoint checkpoint = (Checkpoint)op;
+                    Checkpoint checkpoint = (Checkpoint) op;
                     if (checkpointDir != null) store.checkpoint(checkpointDir);
                 } else {
-                    log.error("unknown operation of type "+op.getClass().getName());
+                    log.error("unknown operation of type " + op.getClass().getName());
                     throw new UnsupportedOperationException();
                 }
             }

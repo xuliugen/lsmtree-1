@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.indeed.lsmtree.recordlog.GenericRecordLogDirectoryPoller;
 import com.indeed.lsmtree.recordlog.RecordLogDirectory;
@@ -51,14 +51,18 @@ public final class RecordLogDirectoryPoller extends GenericRecordLogDirectoryPol
     }
 
     /**
-     * @param recordLogDirectory    record log directory
-     * @param checkpointer          checkpointer
-     * @param loop                  If true, poller will continually poll for new record logs. If false only polls once.
-     * @param deleteRecordLogs      If true, poller will delete record logs up to but excluding the most recently read one.
-     * @throws IOException          if an I/O error occurs
+     * @param recordLogDirectory record log directory
+     * @param checkpointer       checkpointer
+     * @param loop               If true, poller will continually poll for new record logs. If false only polls once.
+     * @param deleteRecordLogs   If true, poller will delete record logs up to but excluding the most recently read one.
+     * @throws IOException if an I/O error occurs
      */
     public RecordLogDirectoryPoller(final RecordLogDirectory<Operation> recordLogDirectory, final Checkpointer<Long> checkpointer, final boolean loop, final boolean deleteRecordLogs) throws IOException {
         super(recordLogDirectory, checkpointer, loop, deleteRecordLogs);
+    }
+
+    private static FileBasedCheckpointer<Long> fileCheckpointer(@Nonnull final File file) throws IOException {
+        return new FileBasedCheckpointer<Long>(file, new LongStringifier(), 0L);
     }
 
     /**
@@ -67,15 +71,10 @@ public final class RecordLogDirectoryPoller extends GenericRecordLogDirectoryPol
     public interface Functions extends GenericRecordLogDirectoryPoller.Functions<Operation> {
         /**
          * Called once for each operation in a record log.
-         *
-         * @param position      the position of the record
-         * @param op            the operation to process
-         * @throws IOException  if an I/O error occurs
+         * @param position the position of the record
+         * @param op       the operation to process
+         * @throws IOException if an I/O error occurs
          */
         void process(long position, Operation op) throws IOException;
-    }
-
-    private static FileBasedCheckpointer<Long> fileCheckpointer(@Nonnull final File file) throws IOException {
-        return new FileBasedCheckpointer<Long>(file, new LongStringifier(), 0L);
     }
 }

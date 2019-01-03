@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.recordcache;
+package com.indeed.lsmtree.recordcache;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -30,12 +30,7 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,18 +40,14 @@ import static com.indeed.util.core.Either.Right;
 /**
  * This class creates an LSM-tree based cache from recordLog files. We call it "standalone" because
  * it does not need to access the recordLog files after initially loading them.
- *
  * This cache stores the {@link V} value in the underlying cache directly. This contrasts with
  * {@link PersistentRecordCache}, which creates an underlying cache
  * of key to (segment number of the recordLog file where the value is located) and then looks up the
  * value in the relevant recordLog file using the segment number.
- *
  * NOTE: Since the dataset will occasionally double in size during compaction, this class is only
  * recommended for use on recordLog datasets of under ~100GB.
- *
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of cached values
- *
  * @author jplaisance
  * @author dcahill
  */
@@ -101,7 +92,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
                 }
 
                 if (op.getClass() == Put.class) {
-                    final Put<K,V> put = (Put)op;
+                    final Put<K, V> put = (Put) op;
                     final long start = System.nanoTime();
                     synchronized (index) {
                         index.put(put.getKey(), put.getValue());
@@ -109,7 +100,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
                     indexPutTime.addAndGet(System.nanoTime() - start);
                     indexPuts.incrementAndGet();
                 } else if (op.getClass() == Delete.class) {
-                    final Delete<K> delete = (Delete)op;
+                    final Delete<K> delete = (Delete) op;
                     for (K k : delete.getKeys()) {
                         final long start = System.nanoTime();
                         synchronized (index) {
@@ -119,7 +110,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
                         indexDeletes.incrementAndGet();
                     }
                 } else if (op.getClass() == Checkpoint.class) {
-                    final Checkpoint checkpoint = (Checkpoint)op;
+                    final Checkpoint checkpoint = (Checkpoint) op;
                     if (checkpointDir != null) {
                         sync();
                         index.checkpoint(new File(checkpointDir, String.valueOf(checkpoint.getTimestamp())));
@@ -185,9 +176,9 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
         return results;
     }
 
-    public Iterator<Either<Exception, P2<K,V>>> getStreaming(Iterator<K> keys, AtomicInteger progress, AtomicInteger skipped) {
+    public Iterator<Either<Exception, P2<K, V>>> getStreaming(Iterator<K> keys, AtomicInteger progress, AtomicInteger skipped) {
         log.info("starting store lookups");
-        final List<Either<Exception, P2<K,V>>> ret = Lists.newArrayList();
+        final List<Either<Exception, P2<K, V>>> ret = Lists.newArrayList();
         int notFound = 0;
         while (keys.hasNext()) {
             final K key = keys.next();
@@ -196,10 +187,10 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
                 value = index.get(key);
             } catch (IOException e) {
                 log.error("error", e);
-                return Iterators.singletonIterator(Left.<Exception, P2<K,V>>of(new IndexReadException(e)));
+                return Iterators.singletonIterator(Left.<Exception, P2<K, V>>of(new IndexReadException(e)));
             }
             if (value != null) {
-                ret.add(Right.<Exception, P2<K,V>>of(P.p(key, value)));
+                ret.add(Right.<Exception, P2<K, V>>of(P.p(key, value)));
             } else {
                 notFound++;
             }
@@ -225,7 +216,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
         index.waitForCompactions();
     }
 
-    public static class Builder<K,V> {
+    public static class Builder<K, V> {
         private File indexDir;
         private File checkpointDir;
         private Serializer<K> keySerializer;
@@ -238,13 +229,13 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
         private boolean mlockBloomFilters = false;
         private long bloomFilterMemory = -1;
 
-        public StandalonePersistentRecordCache<K,V> build() throws IOException {
+        public StandalonePersistentRecordCache<K, V> build() throws IOException {
             if (indexDir == null) throw new IllegalArgumentException("indexDir must be set");
             if (keySerializer == null) throw new IllegalArgumentException("keySerializer must be set");
             if (valueSerializer == null) throw new IllegalArgumentException("valueSerializer must be set");
             SnappyCodec codec = new SnappyCodec();
             StoreBuilder<K, V> indexBuilder = new StoreBuilder<K, V>(indexDir, keySerializer, valueSerializer);
-            indexBuilder.setMaxVolatileGenerationSize(8*1024*1024);
+            indexBuilder.setMaxVolatileGenerationSize(8 * 1024 * 1024);
             indexBuilder.setCodec(codec);
             indexBuilder.setStorageType(StorageType.BLOCK_COMPRESSED);
             indexBuilder.setComparator(comparator);
@@ -257,27 +248,27 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
             return new StandalonePersistentRecordCache<K, V>(index, checkpointDir);
         }
 
-        public Builder<K,V> setIndexDir(final File indexDir) {
+        public Builder<K, V> setIndexDir(final File indexDir) {
             this.indexDir = indexDir;
             return this;
         }
 
-        public Builder<K,V> setKeySerializer(final Serializer<K> keySerializer) {
+        public Builder<K, V> setKeySerializer(final Serializer<K> keySerializer) {
             this.keySerializer = keySerializer;
             return this;
         }
 
-        public Builder<K,V> setValueSerializer(final Serializer<V> valueSerializer) {
+        public Builder<K, V> setValueSerializer(final Serializer<V> valueSerializer) {
             this.valueSerializer = valueSerializer;
             return this;
         }
 
-        public Builder<K,V> setComparator(final Comparator<K> comparator) {
+        public Builder<K, V> setComparator(final Comparator<K> comparator) {
             this.comparator = comparator;
             return this;
         }
 
-        public Builder<K,V> setCheckpointDir(final File checkpointDir) {
+        public Builder<K, V> setCheckpointDir(final File checkpointDir) {
             this.checkpointDir = checkpointDir;
             return this;
         }
@@ -286,7 +277,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
             return dedicatedIndexPartition;
         }
 
-        public Builder<K,V> setDedicatedIndexPartition(final boolean dedicatedIndexPartition) {
+        public Builder<K, V> setDedicatedIndexPartition(final boolean dedicatedIndexPartition) {
             this.dedicatedIndexPartition = dedicatedIndexPartition;
             return this;
         }
@@ -295,7 +286,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
             return mlockIndex;
         }
 
-        public Builder<K,V> setMlockIndex(final boolean mlockIndex) {
+        public Builder<K, V> setMlockIndex(final boolean mlockIndex) {
             this.mlockIndex = mlockIndex;
             return this;
         }
@@ -304,7 +295,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
             return mlockBloomFilters;
         }
 
-        public Builder<K,V> setMlockBloomFilters(final boolean mlockBloomFilters) {
+        public Builder<K, V> setMlockBloomFilters(final boolean mlockBloomFilters) {
             this.mlockBloomFilters = mlockBloomFilters;
             return this;
         }
@@ -313,7 +304,7 @@ public final class StandalonePersistentRecordCache<K, V> implements RecordCache<
             return bloomFilterMemory;
         }
 
-        public Builder<K,V> setBloomFilterMemory(final long bloomFilterMemory) {
+        public Builder<K, V> setBloomFilterMemory(final long bloomFilterMemory) {
             this.bloomFilterMemory = bloomFilterMemory;
             return this;
         }

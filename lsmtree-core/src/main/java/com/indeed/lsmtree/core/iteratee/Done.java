@@ -11,18 +11,18 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core.iteratee;
+package com.indeed.lsmtree.core.iteratee;
 
 import org.apache.log4j.Logger;
 
 /**
  * @author jplaisance
  */
-public final class Done<A,B> implements Iteratee<A,B> {
+public final class Done<A, B> implements Iteratee<A, B> {
     private static final Logger log = Logger.getLogger(Done.class);
 
     public final Input<A> remaining;
-    
+
     public final B value;
 
     public Done(Input<A> remaining, B value) {

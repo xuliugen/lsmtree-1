@@ -11,7 +11,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
- package com.indeed.lsmtree.core.iteratee;
+package com.indeed.lsmtree.core.iteratee;
 
 import org.apache.log4j.Logger;
 
@@ -20,14 +20,14 @@ import org.apache.log4j.Logger;
  */
 public final class EOF<E> implements Input<E> {
     private static final Logger log = Logger.getLogger(EOF.class);
+    private static final EOF eof = new EOF();
+
+    private EOF() {
+    }
 
     public static <E> EOF<E> eof() {
         return eof;
     }
-
-    private static final EOF eof = new EOF();
-
-    private EOF() {}
 
     @Override
     public <Z> Z match(Matcher<E, Z> matcher) {
